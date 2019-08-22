@@ -5,7 +5,6 @@ const retry = require("async-retry");
 const createDeployment = require("./lib/create-deployment.js");
 const getSHA = require("./lib/get-sha");
 const tryCatch = require("./lib/try-catch.js");
-const uploadFile = require("./lib/upload-file.js");
 const validateFile = require("./lib/validate-file.js");
 const validateFiles = require("./lib/validate-files.js");
 const validateToken = require("./lib/validate-token.js");
@@ -26,10 +25,6 @@ exports.upload = tryCatch(async function upload(
   validateToken(token);
   validateFile(file);
   file.sha = getSHA(file.content);
-  await retry(uploadFile(token, config, file), {
-    ...defaultConfig.retry,
-    ...config.retry
-  });
   return retry(createDeployment(token, config, [file]), {
     ...defaultConfig.retry,
     ...config.retry
@@ -44,17 +39,6 @@ exports.multiUpload = tryCatch(async function multiUpload(
   validateFiles(files);
   validateToken(token);
   files = files.map(file => ({ ...file, sha: getSHA(file.content) }));
-
-  await Promise.all(
-    files.map(file => {
-      validateFile(file);
-
-      return retry(uploadFile(token, config, file), {
-        ...defaultConfig.retry,
-        ...config.retry
-      });
-    })
-  );
 
   return await retry(createDeployment(token, config, files), {
     ...defaultConfig.retry,
